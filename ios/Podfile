@@ -14,6 +14,9 @@ if linkage != nil
   use_frameworks! :linkage => linkage.to_sym
 end
 
+# Define the variable to enable Google Maps in react-native-maps
+$Bruno_App = { :google => true }
+
 target 'Bruno_App' do
   config = use_native_modules!
 
@@ -22,6 +25,14 @@ target 'Bruno_App' do
     # An absolute path to your application root.
     :app_path => "#{Pod::Config.instance.installation_root}/.."
   )
+
+  # 👇 FIX: Configuration for react-native-maps
+  rn_maps_path = '../node_modules/react-native-maps'
+  pod 'react-native-maps/Google', :path => rn_maps_path # CRUCIAL LINE for native component bridge
+  
+  # Existing Google SDK pods
+  pod 'GoogleMaps'
+  pod 'Google-Maps-iOS-Utils'
 
   post_install do |installer|
     react_native_post_install(

@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import GoogleMaps
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -14,6 +15,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+
+    // ✅ Google Maps API Key initialization is correctly placed here
+    GMSServices.provideAPIKey("AIzaSyDKXe_LbR1CJdqNtoTxYP6Z0EG0_m8iM8s")
+
+    // ✅ Standard React Native setup, using "Bruno_App" as module name
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -40,9 +46,9 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
+    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif
   }
 }
