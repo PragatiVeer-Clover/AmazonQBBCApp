@@ -1767,6 +1767,7 @@ const styles = StyleSheet.create({
     borderColor: '#ff0000ff',
   },
   offerCard: {
+    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
     marginBottom: 10,
@@ -1777,7 +1778,7 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    width: 350,
+    // width: 350,
   },
   offerTitle: {
     fontSize: 14,

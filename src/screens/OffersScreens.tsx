@@ -6,7 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 
 const OffersScreens = () => {
   const navigation = useNavigation();
-  
+
   const offersData = [
     {
       id: 1,
