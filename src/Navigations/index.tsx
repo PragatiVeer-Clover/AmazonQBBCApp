@@ -21,7 +21,7 @@ import MyProfileScreen from '../screens/MyProfileScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import InviteFriendsScreen from '../screens/InviteFriendsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-
+import OffersScreens from '../screens/OffersScreens';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -51,6 +51,7 @@ export type RootStackParamList = {
   FavoritesScreen: undefined;
   InviteFriendsScreen: undefined;
   SettingsScreen: undefined;
+  OffersScreens: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -60,8 +61,8 @@ const AppNavigator = () => {
     <>
       {/* ✅ Global white status bar */}
       <StatusBar
-        barStyle="dark-content"     // Dark icons/text for light background
-        backgroundColor="#FFFFFF"   // White background
+        barStyle="dark-content" // Dark icons/text for light background
+        backgroundColor="#FFFFFF" // White background
       />
 
       <NavigationContainer>
@@ -81,12 +82,19 @@ const AppNavigator = () => {
           <Stack.Screen name="SearchScreen" component={SearchScreen} />
           <Stack.Screen name="ServicesScreen" component={ServicesScreen} />
           <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
-          <Stack.Screen name="LoyaltyPointsScreen" component={LoyaltyPointsScreen} />
+          <Stack.Screen
+            name="LoyaltyPointsScreen"
+            component={LoyaltyPointsScreen}
+          />
           <Stack.Screen name="LoyaltyScreen" component={LoyaltyScreen} />
           <Stack.Screen name="MyProfileScreen" component={MyProfileScreen} />
           <Stack.Screen name="FavoritesScreen" component={FavoritesScreen} />
-          <Stack.Screen name="InviteFriendsScreen" component={InviteFriendsScreen} />
+          <Stack.Screen
+            name="InviteFriendsScreen"
+            component={InviteFriendsScreen}
+          />
           <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
+          <Stack.Screen name="OffersScreens" component={OffersScreens} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

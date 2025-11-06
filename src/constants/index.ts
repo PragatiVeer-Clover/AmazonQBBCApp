@@ -88,6 +88,7 @@ const Strings = {
   LATITUDE: 'latitude',
   LONITUDE: 'longitude',
   CITY_ADDRESS: 'city_address',
+  OFFER_SHOWN: 'offer_shown',
 
   WOMAN: 'Women',
   MAN: 'Men',
