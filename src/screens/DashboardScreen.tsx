@@ -1,5 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Image, Platform, PermissionsAndroid, Alert, FlatList, Linking, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  ScrollView,
+  Image,
+  Platform,
+  PermissionsAndroid,
+  Alert,
+  FlatList,
+  Linking,
+  Dimensions,
+  Animated,
+  Easing,
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,55 +28,64 @@ import Strings from '../constants';
 import { BarberListIcon } from '../components';
 import { starProducts } from '../data';
 // ⚠️ We no longer need the Ionicons import since we are using local images
-// import Ionicons from 'react-native-vector-icons/Ionicons'; 
+// import Ionicons from 'react-native-vector-icons/Ionicons';
 
-type DashboardScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Dashboard'>;
+type DashboardScreenNavigationProp = StackNavigationProp<
+  RootStackParamList,
+  'Dashboard'
+>;
 
 // MODIFIED COMPONENT: Notification icon now uses a local Image asset
 const NotificationBadge = ({ count = 0 }) => (
-    <View style={{ position: 'relative' }} pointerEvents="none">
-        <Image 
-          source={require('../assets/notification_pin.png')} // 🔔 REPLACED WITH IMAGE
-          style={{ width: 40, height: 40 }}
-          resizeMode="contain"
-        />
-    </View>
+  <View style={{ position: 'relative' }} pointerEvents="none">
+    <Image
+      source={require('../assets/notification_pin.png')} // 🔔 REPLACED WITH IMAGE
+      style={{ width: 40, height: 40 }}
+      resizeMode="contain"
+    />
+  </View>
 );
 
 const badgeStyles = StyleSheet.create({
-    badge: {
-        position: 'absolute',
-        right: -5,
-        top: -5,
-        backgroundColor: '#666', // Adjusted to grey/silver color from the screenshot
-        borderRadius: 10,
-        width: 20,
-        height: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10,
-    },
-    badgeText: {
-        color: 'white',
-        fontSize: 10,
-        fontWeight: 'bold',
-        marginTop: Platform.OS === 'ios' ? 1 : 0, // Tiny adjustment for better centering
-    },
+  badge: {
+    position: 'absolute',
+    right: -5,
+    top: -5,
+    backgroundColor: '#666', // Adjusted to grey/silver color from the screenshot
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  badgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginTop: Platform.OS === 'ios' ? 1 : 0, // Tiny adjustment for better centering
+  },
 });
 
 const DashboardScreen = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
   const [isNavigating, setIsNavigating] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
-  const [currentPermission, setCurrentPermission] = useState<'location' | 'notification'>('location');
-  const [showNotificationListModal, setShowNotificationListModal] = useState(false);
+  const [currentPermission, setCurrentPermission] = useState<
+    'location' | 'notification'
+  >('location');
+  const [showNotificationListModal, setShowNotificationListModal] =
+    useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
-  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>(
+    [],
+  );
   const [nearbyBarbers, setNearbyBarbers] = useState<any[]>([]);
   const [kycDone, setKycDone] = useState(false);
   const [userName, setUserName] = useState('User');
   const [userAddress, setUserAddress] = useState('');
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [showModal, setShowModal] = useState<boolean>(false);
 
   // Get dynamic dates
   const today = new Date();
@@ -68,15 +93,28 @@ const DashboardScreen = () => {
   yesterday.setDate(yesterday.getDate() - 1);
   const dayBeforeYesterday = new Date(today);
   dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
-  
+
   const formatDate = (date: Date) => {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                   'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
     return `${months[date.getMonth()]} ${date.getDate()}`;
   };
 
   const allNotificationIds = ['1', '2', '3', '4', '5', '6'];
-  const allSelected = selectedNotifications.length === allNotificationIds.length;
+  const allSelected =
+    selectedNotifications.length === allNotificationIds.length;
 
   const handleSelectAll = () => {
     if (allSelected) {
@@ -92,10 +130,22 @@ const DashboardScreen = () => {
     setShowOptionsMenu(false);
   };
 
+  const closeModal = () => {
+    setShowModal(false);
+    // Animated.timing(slideAnim, {
+    //   toValue: 300,
+    //   duration: 300,
+    //   easing: Easing.in(Easing.ease),
+    //   useNativeDriver: true,
+    // }).start(() => setShowModal(false));
+  };
+
   useEffect(() => {
+    setShowModal(true);
     checkPermissions();
     checkKycStatus();
     loadUserAddress();
+    // checkOffers();
   }, []);
 
   const loadUserAddress = async () => {
@@ -103,7 +153,7 @@ const DashboardScreen = () => {
       const latitude = await AsyncStorage.getItem(Strings.LATITUDE);
       const longitude = await AsyncStorage.getItem(Strings.LONITUDE);
       console.log('Loading address for coordinates:', latitude, longitude);
-      
+
       if (latitude && longitude) {
         setIsLoadingAddress(true);
         const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${Strings.GOMAPS_API_KEY}`;
@@ -111,7 +161,7 @@ const DashboardScreen = () => {
         const response = await fetch(url);
         const data = await response.json();
         console.log('Geocoding response:', data);
-        
+
         if (data.status === 'OK' && data.results.length > 0) {
           const address = data.results[0].formatted_address;
           console.log('Address loaded:', address);
@@ -145,14 +195,22 @@ const DashboardScreen = () => {
     }
   };
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const calculateDistance = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ) => {
     const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c * 1000;
   };
 
@@ -168,29 +226,35 @@ const DashboardScreen = () => {
     try {
       const latitude = await AsyncStorage.getItem(Strings.LATITUDE);
       const longitude = await AsyncStorage.getItem(Strings.LONITUDE);
-      console.log('Loading nearby barbers for coordinates:', latitude, longitude);
-      
+      console.log(
+        'Loading nearby barbers for coordinates:',
+        latitude,
+        longitude,
+      );
+
       if (latitude && longitude) {
         const url = `${Strings.NEARBY_PLACES_API_URL}?location=${latitude},${longitude}&radius=${Strings.REDIUS}&type=${Strings.NAME_PLACE}&key=${Strings.GOMAPS_API_KEY}`;
         console.log('Places API URL:', url);
         const response = await fetch(url);
         const data = await response.json();
         console.log('Places API response:', data);
-        
+
         if (data.status === 'OK') {
-          const barbersWithDistance = (data.results || []).map((barber: any) => {
-            const distance = calculateDistance(
-              parseFloat(latitude),
-              parseFloat(longitude),
-              barber.geometry.location.lat,
-              barber.geometry.location.lng
-            );
-            return {
-              ...barber,
-              distance: distance,
-              distanceText: formatDistance(distance)
-            };
-          }).filter((barber: any) => barber.distance > 50)
+          const barbersWithDistance = (data.results || [])
+            .map((barber: any) => {
+              const distance = calculateDistance(
+                parseFloat(latitude),
+                parseFloat(longitude),
+                barber.geometry.location.lat,
+                barber.geometry.location.lng,
+              );
+              return {
+                ...barber,
+                distance: distance,
+                distanceText: formatDistance(distance),
+              };
+            })
+            .filter((barber: any) => barber.distance > 50)
             .sort((a: any, b: any) => a.distance - b.distance);
           console.log('Nearby barbers found:', barbersWithDistance.length);
           setNearbyBarbers(barbersWithDistance.slice(0, 5));
@@ -208,28 +272,37 @@ const DashboardScreen = () => {
   const checkPermissions = async () => {
     try {
       if (Platform.OS === 'android') {
-        const locationGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-        const notificationGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-        
+        const locationGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        );
+        const notificationGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+
         if (!locationGranted) {
           setCurrentPermission('location');
           setShowPermissionsModal(true);
         } else {
-          console.log('Location permission already granted, getting location...');
+          console.log(
+            'Location permission already granted, getting location...',
+          );
           Geolocation.getCurrentPosition(
-            async (position) => {
+            async position => {
               console.log('Location received:', position.coords);
               const { latitude, longitude } = position.coords;
               await AsyncStorage.setItem(Strings.LATITUDE, latitude.toString());
-              await AsyncStorage.setItem(Strings.LONITUDE, longitude.toString());
+              await AsyncStorage.setItem(
+                Strings.LONITUDE,
+                longitude.toString(),
+              );
               console.log('Location saved to AsyncStorage');
               loadUserAddress();
               loadNearbyBarbers();
             },
-            (error) => {
+            error => {
               console.log('Error getting location:', error);
             },
-            { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 }
+            { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 },
           );
           if (!notificationGranted) {
             setCurrentPermission('notification');
@@ -238,7 +311,7 @@ const DashboardScreen = () => {
         }
       } else {
         Geolocation.getCurrentPosition(
-          async (position) => {
+          async position => {
             console.log('iOS Location permission already granted');
             const { latitude, longitude } = position.coords;
             await AsyncStorage.setItem(Strings.LATITUDE, latitude.toString());
@@ -247,7 +320,7 @@ const DashboardScreen = () => {
             loadUserAddress();
             loadNearbyBarbers();
           },
-          (error) => {
+          error => {
             if (error.code === 1) {
               setCurrentPermission('location');
               setShowPermissionsModal(true);
@@ -257,15 +330,13 @@ const DashboardScreen = () => {
               setShowPermissionsModal(true);
             }
           },
-          { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 }
+          { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 },
         );
       }
     } catch (err) {
       console.warn('Error checking permissions:', err);
     }
   };
-
-
 
   const handlePermissionAllow = async () => {
     if (currentPermission === 'location') {
@@ -276,60 +347,69 @@ const DashboardScreen = () => {
             PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
             {
               title: 'Location Permission',
-              message: 'This app needs access to your location to show it on the map.',
+              message:
+                'This app needs access to your location to show it on the map.',
               buttonNeutral: 'Ask Me Later',
               buttonNegative: 'Cancel',
               buttonPositive: 'OK',
             },
           );
           if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-            Alert.alert('Permission Denied', 'Location permission is required.');
+            Alert.alert(
+              'Permission Denied',
+              'Location permission is required.',
+            );
             setShowPermissionsModal(false);
             navigation.navigate('LocationSetup');
             return;
           }
         }
-        
+
         Geolocation.getCurrentPosition(
-          async (position) => {
+          async position => {
             const { latitude, longitude } = position.coords;
             await AsyncStorage.setItem(Strings.LATITUDE, latitude.toString());
             await AsyncStorage.setItem(Strings.LONITUDE, longitude.toString());
             console.log('Location saved to AsyncStorage');
             loadUserAddress();
             loadNearbyBarbers();
-            
+
             // Check notification permission
-            const notificationGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+            const notificationGranted = await PermissionsAndroid.check(
+              PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+            );
             if (!notificationGranted) {
               setCurrentPermission('notification');
             } else {
               setShowPermissionsModal(false);
             }
           },
-          (error) => {
+          error => {
             console.error('Error getting location:', error);
-            
+
             let errorMessage = 'Unable to get current location.';
-            
+
             switch (error.code) {
               case 1:
-                errorMessage = 'Location permission denied. Please enable location access in settings.';
+                errorMessage =
+                  'Location permission denied. Please enable location access in settings.';
                 break;
               case 2:
-                errorMessage = 'Location unavailable. Please check your GPS/network connection.';
+                errorMessage =
+                  'Location unavailable. Please check your GPS/network connection.';
                 break;
               case 3:
                 errorMessage = 'Location request timed out. Please try again.';
                 break;
               default:
-                errorMessage = 'Unable to get location. Please check GPS settings and try again.';
+                errorMessage =
+                  'Unable to get location. Please check GPS settings and try again.';
             }
-            
+
             Alert.alert('Location Error', errorMessage);
             setShowPermissionsModal(false);
           },
-          { enableHighAccuracy: false, timeout: 30000, maximumAge: 60000 }
+          { enableHighAccuracy: false, timeout: 30000, maximumAge: 60000 },
         );
       } catch (error) {
         console.error('Permission error:', error);
@@ -343,7 +423,8 @@ const DashboardScreen = () => {
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
             {
               title: 'Notification Permission',
-              message: 'Allow Bruno\'s Barbers to send you notifications about orders and offers.',
+              message:
+                "Allow Bruno's Barbers to send you notifications about orders and offers.",
               buttonNeutral: 'Ask Me Later',
               buttonNegative: 'Cancel',
               buttonPositive: 'OK',
@@ -370,7 +451,7 @@ const DashboardScreen = () => {
     try {
       const latitude = await AsyncStorage.getItem(Strings.LATITUDE);
       const longitude = await AsyncStorage.getItem(Strings.LONITUDE);
-      
+
       if (latitude && longitude) {
         navigation.navigate('Map', {
           location: {
@@ -381,7 +462,7 @@ const DashboardScreen = () => {
           },
           searchText: userAddress || 'Current Location',
           showBarbers: true,
-          selectedAddress: userAddress
+          selectedAddress: userAddress,
         });
       } else {
         navigation.navigate('LocationSetup');
@@ -392,6 +473,697 @@ const DashboardScreen = () => {
     }
   };
 
+  const openOffer = async () => {
+    navigation.navigate('OffersScreens');
+    setShowModal(false);
+  };
+
+  const checkOffers = async () => {
+    try {
+      const hasOfferBeenShown = await AsyncStorage.getItem(Strings.OFFER_SHOWN);
+      console.error('Offer shown status:', hasOfferBeenShown);
+      if (!hasOfferBeenShown) {
+        setShowModal(true);
+        await AsyncStorage.setItem(Strings.OFFER_SHOWN, 'true');
+      }
+    } catch (error) {
+      console.error('Error checking offers:', error);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          {/* PROFILE ICON REPLACED */}
+          <TouchableOpacity
+            style={styles.profileIconContainer}
+            onPress={openMapScreen}
+          >
+            <Image
+              source={require('../assets/locationpin.png')} // 🔔 REPLACED WITH IMAGE
+              style={{ width: 40, height: 40 }}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
+
+          <Image
+            source={require('../assets/app_logo.png')}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
+
+          {/* NOTIFICATION ICON REPLACED */}
+          <TouchableOpacity
+            style={styles.notificationIconContainer}
+            onPress={() => {
+              console.log('Notification icon pressed');
+              setShowNotificationListModal(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <NotificationBadge count={3} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeText}>Hello, {userName}!</Text>
+          <TouchableOpacity
+            style={styles.locationContainer}
+            onPress={openMapScreen}
+          >
+            {/* LOCATION PIN ICON REPLACED */}
+            <Image
+              source={require('../assets/locationpin.png')} // 📍 REPLACED WITH IMAGE
+              style={styles.locationPinIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.locationText}>
+              {isLoadingAddress
+                ? 'Loading location...'
+                : userAddress || 'Loading location...'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.promoCard}>
+          <Text style={styles.promoTitle}>Get 20% Off Your First Cut ❤️</Text>
+          <Text style={styles.promoSubtitle}>
+            Book your first appointment today and enjoy a fresh style at a
+            special price.
+          </Text>
+          <View style={styles.promoIndicators}>
+            <View style={[styles.indicator, styles.activeIndicator]} />
+            <View style={styles.indicator} />
+            <View style={styles.indicator} />
+          </View>
+        </View>
+
+        {kycDone && (
+          <>
+            <View style={styles.branchSection}>
+              <Text style={styles.branchTitle}>Branches Near You</Text>
+              <TouchableOpacity>
+                <Text style={styles.viewAllText}>View All </Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={nearbyBarbers}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item, index) => index.toString()}
+              contentContainerStyle={styles.barbersList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.barberCard}
+                  onPress={async () => {
+                    const latitude = await AsyncStorage.getItem(
+                      Strings.LATITUDE,
+                    );
+                    const longitude = await AsyncStorage.getItem(
+                      Strings.LONITUDE,
+                    );
+                    navigation.navigate('BranchDetails', {
+                      placeId: item.place_id,
+                      branchName: item.name || 'Barber Shop',
+                      userLocation:
+                        latitude && longitude
+                          ? {
+                              latitude: parseFloat(latitude),
+                              longitude: parseFloat(longitude),
+                            }
+                          : undefined,
+                    });
+                  }}
+                >
+                  <View style={styles.branchImagePlaceholder}>
+                    <Image
+                      source={require('../assets/bback.png')}
+                      style={styles.branchImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+
+                  <TouchableOpacity style={styles.heartIcon}>
+                    <Text style={styles.heartText}>♡</Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.cardContent}>
+                    <Text style={styles.barberName} numberOfLines={1}>
+                      {item.name || 'Barber Shop'}
+                    </Text>
+                    <Text style={styles.barberAddress} numberOfLines={1}>
+                      {item.vicinity || 'Location'}
+                    </Text>
+                    <View style={styles.distanceContainer}>
+                      <Image
+                        source={require('../assets/locationpin.png')}
+                        style={styles.distanceIcon}
+                        resizeMode="contain"
+                      />
+                      <Text style={styles.barberDistanceText}>
+                        {item.distanceText || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+
+            <View style={styles.starProductsSection}>
+              <Text style={styles.starProductsTitle}>Star Products</Text>
+              <FlatList
+                data={starProducts}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={item => item.id.toString()}
+                contentContainerStyle={styles.starProductsList}
+                renderItem={({ item }) => (
+                  <View style={styles.starProductCard}>
+                    <View style={styles.starProductIcon}>
+                      <Text style={styles.starProductEmoji}>★</Text>
+                    </View>
+                    <Text style={styles.starProductName}>{item.name}</Text>
+                  </View>
+                )}
+              />
+            </View>
+
+            <View style={styles.productsSection}>
+              <View style={styles.productsHeader}>
+                <Text style={styles.productsTitle}>Products</Text>
+                <Text style={styles.viewAllText}>View All {'>'}</Text>
+              </View>
+              <FlatList
+                data={[
+                  {
+                    id: '1',
+                    name: "Bruno's Hairwax Classic",
+                    price: '₱360',
+                    originalPrice: '₱450',
+                    discount: '20% off',
+                  },
+                  {
+                    id: '2',
+                    name: "Bruno's Hairstyling Paste",
+                    price: '₱360',
+                    originalPrice: '₱450',
+                    discount: '20% off',
+                  },
+                  {
+                    id: '3',
+                    name: "Bruno's Pomade Strong Hold",
+                    price: '₱360',
+                    originalPrice: '₱450',
+                    discount: '20% off',
+                  },
+                  {
+                    id: '4',
+                    name: "Bruno's Matte Clay Wax",
+                    price: '₱360',
+                    originalPrice: '₱450',
+                    discount: '20% off',
+                  },
+                ]}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={item => item.id}
+                contentContainerStyle={styles.productsList}
+                renderItem={({ item }) => (
+                  <View style={styles.productCard}>
+                    <View style={styles.productImagePlaceholder}>
+                      <Image
+                        source={require('../assets/bback.png')}
+                        style={styles.productImage}
+                        resizeMode="cover"
+                      />
+                    </View>
+                    <View style={styles.productDetails}>
+                      <Text style={styles.productName} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+
+                      <View style={styles.priceRow}>
+                        <Text style={styles.currentPrice}>{item.price}</Text>
+                        <Text style={styles.originalPrice}>
+                          {item.originalPrice}
+                        </Text>
+                        <Text style={styles.discountText}>
+                          ({item.discount})
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              />
+            </View>
+
+            <View style={styles.productsSection}>
+              <View style={styles.productsHeader}>
+                <Text style={styles.productsTitle}>Offers</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('OffersScreens')}
+                >
+                  <Text style={styles.viewAllText}>View All {'>'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.offerCard}>
+                <Text style={styles.offerTitle}>Summer Discount Offer</Text>
+                <Text style={styles.offerSubtitle}>
+                  Enjoy 15% off your next haircut or grooming service.
+                </Text>
+                <View style={styles.codeView}>
+                  <Text style={styles.codeText}>BARER15</Text>
+                </View>
+
+                <Text style={styles.offerSubtitle}>
+                  <Text
+                    style={{
+                      color: '#000000',
+                      fontWeight: '600',
+                      fontSize: 14,
+                    }}
+                  >
+                    Validity:{' '}
+                  </Text>
+                  August 18, 2025 - August 31, 2025
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* Footer Navigation */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.footerItem}>
+          <Image
+            source={require('../assets/home.png')}
+            style={styles.footerIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => {
+            if (!isNavigating) {
+              setIsNavigating(true);
+              navigation.replace('SearchScreen');
+              setTimeout(() => setIsNavigating(false), 1000);
+            }
+          }}
+        >
+          <Image
+            source={require('../assets/search.png')}
+            style={styles.footerIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => {
+            if (!isNavigating) {
+              setIsNavigating(true);
+              navigation.replace('ServicesScreen');
+              setTimeout(() => setIsNavigating(false), 1000);
+            }
+          }}
+        >
+          <Image
+            source={require('../assets/services.png')}
+            style={styles.footerIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => {
+            if (!isNavigating) {
+              setIsNavigating(true);
+              navigation.replace('ProfileScreen');
+              setTimeout(() => setIsNavigating(false), 1000);
+            }
+          }}
+        >
+          <Image
+            source={require('../assets/profile.png')}
+            style={styles.footerIcon}
+            resizeMode="contain"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showPermissionsModal}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View
+              style={
+                currentPermission === 'location'
+                  ? styles.locationIllustration
+                  : styles.notificationIllustration
+              }
+            >
+              <Image
+                source={
+                  currentPermission === 'location'
+                    ? require('../assets/locationpermission.png')
+                    : require('../assets/notification permission.png')
+                }
+                style={
+                  currentPermission === 'location'
+                    ? styles.locationImage
+                    : styles.notificationImage
+                }
+                resizeMode="contain"
+              />
+            </View>
+
+            <Text style={styles.modalTitle}>
+              {currentPermission === 'location' ? 'Location' : 'Notification'}
+            </Text>
+            <Text style={styles.modalSubtitle}>
+              {currentPermission === 'location'
+                ? "Allow Bruno's Barbers to access your location to help you find nearby branches."
+                : 'Please enable notifications to receive updates on your orders and offers.'}
+            </Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.skipButton, { marginRight: 15 }]}
+                onPress={handlePermissionSkip}
+              >
+                <Text style={styles.skipButtonText}>Skip for now</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.allowButton}
+                onPress={handlePermissionAllow}
+              >
+                <Text style={styles.allowButtonText}>Allow</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Notification List Modal */}
+      <Modal
+        visible={showNotificationListModal}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setShowNotificationListModal(false)}
+      >
+        <SafeAreaView style={styles.notificationFullScreen}>
+          <View style={styles.notificationHeader}>
+            <TouchableOpacity
+              onPress={() => setShowNotificationListModal(false)}
+              style={styles.backButton}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.notificationTitle}>Notifications</Text>
+            <TouchableOpacity
+              style={styles.moreButton}
+              onPress={() => setShowOptionsMenu(!showOptionsMenu)}
+            >
+              <Text style={styles.moreText}>⋮</Text>
+            </TouchableOpacity>
+            {showOptionsMenu && (
+              <View style={styles.optionsMenu}>
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={handleSelectAll}
+                >
+                  <Text style={styles.optionText}>
+                    {allSelected ? 'Deselect All' : 'Select All'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={handleMarkAsRead}
+                >
+                  <Text style={styles.optionText}>Mark as read</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <ScrollView
+            style={styles.notificationContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Today Section */}
+            <Text style={styles.sectionHeader}>Today</Text>
+
+            <TouchableOpacity
+              style={[
+                styles.notificationItem,
+                selectedNotifications.includes('1') && {
+                  backgroundColor: '#e3f2fd',
+                },
+              ]}
+              onPress={() => {
+                if (selectedNotifications.includes('1')) {
+                  setSelectedNotifications(prev =>
+                    prev.filter(id => id !== '1'),
+                  );
+                } else {
+                  setSelectedNotifications(prev => [...prev, '1']);
+                }
+              }}
+            >
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>🎉</Text>
+                {selectedNotifications.includes('1') && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.itemTitle}>Loyalty Points</Text>
+                <Text style={styles.itemMessage}>
+                  Congratulations! You just earned 10 BB points.
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.notificationItem,
+                selectedNotifications.includes('2') && {
+                  backgroundColor: '#e3f2fd',
+                },
+              ]}
+              onPress={() => {
+                if (selectedNotifications.includes('2')) {
+                  setSelectedNotifications(prev =>
+                    prev.filter(id => id !== '2'),
+                  );
+                } else {
+                  setSelectedNotifications(prev => [...prev, '2']);
+                }
+              }}
+            >
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>📅</Text>
+                {selectedNotifications.includes('2') && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.itemTitle}>Appointment Confirmed ✂️</Text>
+                <Text style={styles.itemMessage}>
+                  Your booking at Bruno's Barbers is scheduled for August 18,
+                  2025, at 3:00 PM
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.notificationItem,
+                selectedNotifications.includes('3') && {
+                  backgroundColor: '#e3f2fd',
+                },
+              ]}
+              onPress={() => {
+                if (selectedNotifications.includes('3')) {
+                  setSelectedNotifications(prev =>
+                    prev.filter(id => id !== '3'),
+                  );
+                } else {
+                  setSelectedNotifications(prev => [...prev, '3']);
+                }
+              }}
+            >
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>📦</Text>
+                {selectedNotifications.includes('3') && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.itemTitle}>Order Delivered</Text>
+                <Text style={styles.itemMessage}>
+                  Your Bruno's products have been delivered. Enjoy your grooming
+                  essentials!
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Yesterday Section */}
+            <Text style={styles.sectionHeader}>Yesterday</Text>
+
+            <TouchableOpacity
+              style={[
+                styles.notificationItem,
+                selectedNotifications.includes('4') && {
+                  backgroundColor: '#e3f2fd',
+                },
+              ]}
+              onPress={() => {
+                if (selectedNotifications.includes('4')) {
+                  setSelectedNotifications(prev =>
+                    prev.filter(id => id !== '4'),
+                  );
+                } else {
+                  setSelectedNotifications(prev => [...prev, '4']);
+                }
+              }}
+            >
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>🏷️</Text>
+                {selectedNotifications.includes('4') && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.itemTitle}>New Offer Just for You!</Text>
+                <Text style={styles.itemMessage}>
+                  Use code STYLE20 and get 20% off your next haircut.
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.notificationItem,
+                selectedNotifications.includes('5') && {
+                  backgroundColor: '#e3f2fd',
+                },
+              ]}
+              onPress={() => {
+                if (selectedNotifications.includes('5')) {
+                  setSelectedNotifications(prev =>
+                    prev.filter(id => id !== '5'),
+                  );
+                } else {
+                  setSelectedNotifications(prev => [...prev, '5']);
+                }
+              }}
+            >
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>🏷️</Text>
+                {selectedNotifications.includes('5') && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.itemTitle}>Groom & Save!</Text>
+                <Text style={styles.itemMessage}>
+                  Use CARE25 for 25% off on selected hair products.
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Day Before Yesterday Section */}
+            <Text style={styles.sectionHeader}>
+              {formatDate(dayBeforeYesterday)}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.notificationItem,
+                selectedNotifications.includes('6') && {
+                  backgroundColor: '#e3f2fd',
+                },
+              ]}
+              onPress={() => {
+                if (selectedNotifications.includes('6')) {
+                  setSelectedNotifications(prev =>
+                    prev.filter(id => id !== '6'),
+                  );
+                } else {
+                  setSelectedNotifications(prev => [...prev, '6']);
+                }
+              }}
+            >
+              <View style={styles.iconContainer}>
+                <Text style={styles.iconText}>📅</Text>
+                {selectedNotifications.includes('6') && (
+                  <View style={styles.checkmark}>
+                    <Text style={styles.checkmarkText}>✓</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.itemTitle}>Appointment Confirmed ✂️</Text>
+                <Text style={styles.itemMessage}>
+                  Your booking at Bruno's Barbers is scheduled for August 18,
+                  2025, at 3:00 PM
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+      <Modal visible={showModal} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <TouchableOpacity
+            style={styles.overlay}
+            activeOpacity={1}
+            onPress={closeModal}
+          />
+          <View style={[styles.bottomSheet]}>
+            <Text style={styles.modalTitlea}>🎉 Special Festive Offer! 🎉</Text>
+            <Text style={styles.modalMessagea}>
+              Unlock an exclusive **20% discount** on all premium services and
+              grooming packages. This limited-time offer is our way of saying
+              thank you for being a valued customer!!
+            </Text>
+            <Text style={styles.modalNote}>
+              🚀 "Hurry! Offer valid for a short time only 🚀
+            </Text>
+            <TouchableOpacity style={styles.modalButtona} onPress={openOffer}>
+              <Text style={styles.modalButtonTexta}>Claim Offer</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalButtonSecondary}
+              onPress={closeModal}
+            >
+              <Text style={styles.modalButtonTexta}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -400,6 +1172,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -420,14 +1193,14 @@ const styles = StyleSheet.create({
     height: 14,
     marginRight: 6,
   },
-  profileIconContainer: { 
+  profileIconContainer: {
     padding: 5,
   },
   headerLogo: {
     height: 60,
     width: 120,
   },
-  notificationIconContainer: { 
+  notificationIconContainer: {
     padding: 5,
   },
   welcomeSection: {
@@ -497,7 +1270,8 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     fontSize: 14,
-    color: '#666',
+    color: '#000000ff',
+    fontWeight: '700',
   },
   barbersList: {
     paddingHorizontal: 20,
@@ -676,7 +1450,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#000',
-   
   },
   priceRow: {
     flexDirection: 'row',
@@ -796,7 +1569,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  
+
   notificationIcon: {
     width: 50,
     height: 50,
@@ -836,7 +1609,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  
+
   moreButton: {
     padding: 5,
   },
@@ -844,7 +1617,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#000',
   },
-  
+
   sectionHeader: {
     fontSize: 18,
     fontWeight: '600',
@@ -860,7 +1633,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  
+
   iconContainer: {
     width: 40,
     height: 40,
@@ -930,463 +1703,128 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  backArrow:{
-
+  backArrow: {},
+  backButton: {},
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
   },
-  backButton:{
-    
+  bottomSheet: {
+    backgroundColor: '#000000ff',
+    padding: 20,
+    height: 300,
+  },
+  modalTitlea: {
+    fontSize: 25,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+    color: '#ffffffff',
+  },
+  modalMessagea: {
+    fontSize: 15,
+    color: '#ffffffff',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtona: {
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  modalButtonTexta: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  openButton: {
+    alignSelf: 'center',
+    marginTop: 100,
+    backgroundColor: '#007AFF',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  openButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  modalNote: {
+    fontSize: 16,
+    color: '#ff0000ff',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginBottom: 11,
+    borderWidth: 1,
+    borderColor: '#ff0000ff',
+  },
+  offerCard: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    width: 350,
+  },
+  offerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 8,
+  },
+  offerSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#404040',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  offerDetails: {
+    fontSize: 12,
+    color: '#444',
+    marginBottom: 4,
+  },
+  offerButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  offerButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  codeView: {
+    borderColor: '#e0e0e0',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 10,
+    paddingVertical: 10,
+  },
+  codeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
 });
-
-  return (
-    <SafeAreaView style={styles.container}>
-      
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          {/* PROFILE ICON REPLACED */}
-          <TouchableOpacity style={styles.profileIconContainer} onPress={openMapScreen}>
-              <Image 
-          source={require('../assets/locationpin.png')} // 🔔 REPLACED WITH IMAGE
-          style={{ width: 40, height: 40 }}
-          resizeMode="contain"
-        />
-          </TouchableOpacity>
-          
-          <Image source={require('../assets/app_logo.png')} style={styles.headerLogo} resizeMode="contain" />
-          
-          {/* NOTIFICATION ICON REPLACED */}
-          <TouchableOpacity 
-            style={styles.notificationIconContainer} 
-            onPress={() => {
-              console.log('Notification icon pressed');
-              setShowNotificationListModal(true);
-            }}
-            activeOpacity={0.7}
-          >
-              <NotificationBadge count={3} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Hello, {userName}!</Text>
-          <TouchableOpacity style={styles.locationContainer} onPress={openMapScreen}>
-            {/* LOCATION PIN ICON REPLACED */}
-            <Image 
-                source={require('../assets/locationpin.png')} // 📍 REPLACED WITH IMAGE
-                style={styles.locationPinIcon}
-                resizeMode="contain"
-            />
-            <Text style={styles.locationText}>{isLoadingAddress ? 'Loading location...' : userAddress || 'Loading location...'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.promoCard}>
-          <Text style={styles.promoTitle}>Get 20% Off Your First Cut ❤️</Text>
-          <Text style={styles.promoSubtitle}>
-            Book your first appointment today and enjoy a fresh style at a special price.
-          </Text>
-          <View style={styles.promoIndicators}>
-            <View style={[styles.indicator, styles.activeIndicator]} />
-            <View style={styles.indicator} />
-            <View style={styles.indicator} />
-          </View>
-        </View>
-
-        {kycDone && (
-          <>
-            <View style={styles.branchSection}>
-              <Text style={styles.branchTitle}>Branches Near You</Text>
-              <TouchableOpacity>
-                <Text style={styles.viewAllText}>View All </Text>
-              </TouchableOpacity>
-            </View>
-            
-            <FlatList
-              data={nearbyBarbers}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item, index) => index.toString()}
-              contentContainerStyle={styles.barbersList}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.barberCard}
-                  onPress={async () => {
-                    const latitude = await AsyncStorage.getItem(Strings.LATITUDE);
-                    const longitude = await AsyncStorage.getItem(Strings.LONITUDE);
-                    navigation.navigate('BranchDetails', {
-                      placeId: item.place_id,
-                      branchName: item.name || 'Barber Shop',
-                      userLocation: latitude && longitude ? {
-                        latitude: parseFloat(latitude),
-                        longitude: parseFloat(longitude)
-                      } : undefined
-                    });
-                  }}
-                >
-                  <View style={styles.branchImagePlaceholder}>
-                    <Image source={require('../assets/bback.png')} style={styles.branchImage} resizeMode="cover" />
-                  </View>
-                  
-                  <TouchableOpacity style={styles.heartIcon}>
-                    <Text style={styles.heartText}>♡</Text> 
-                  </TouchableOpacity>
-
-                  <View style={styles.cardContent}>
-                    <Text style={styles.barberName} numberOfLines={1}>{item.name || 'Barber Shop'}</Text>
-                    <Text style={styles.barberAddress} numberOfLines={1}>{item.vicinity || 'Location'}</Text>
-                    <View style={styles.distanceContainer}>
-                      <Image 
-                        source={require('../assets/locationpin.png')}
-                        style={styles.distanceIcon}
-                        resizeMode="contain"
-                      />
-                      <Text style={styles.barberDistanceText}>{item.distanceText || 'N/A'}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-
-            <View style={styles.starProductsSection}>
-              <Text style={styles.starProductsTitle}>Star Products</Text>
-              <FlatList
-                data={starProducts}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id.toString()}
-                contentContainerStyle={styles.starProductsList}
-                renderItem={({ item }) => (
-                  <View style={styles.starProductCard}>
-                    <View style={styles.starProductIcon}>
-                      <Text style={styles.starProductEmoji}>★</Text>
-                    </View>
-                    <Text style={styles.starProductName}>{item.name}</Text>
-                  </View>
-                )}
-              />
-            </View>
-
-            <View style={styles.productsSection}>
-              <View style={styles.productsHeader}>
-                <Text style={styles.productsTitle}>Products</Text>
-                <Text style={styles.viewAllText}>View All {'>'}</Text>
-              </View>
-              <FlatList
-                data={[
-                  { id: '1', name: "Bruno's Hairwax Classic", price: '₱360', originalPrice: '₱450', discount: '20% off' },
-                  { id: '2', name: "Bruno's Hairstyling Paste", price: '₱360', originalPrice: '₱450', discount: '20% off' },
-                  { id: '3', name: "Bruno's Pomade Strong Hold", price: '₱360', originalPrice: '₱450', discount: '20% off' },
-                  { id: '4', name: "Bruno's Matte Clay Wax", price: '₱360', originalPrice: '₱450', discount: '20% off' },
-                ]}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.productsList}
-                renderItem={({ item }) => (
-                  <View style={styles.productCard}>
-                    <View style={styles.productImagePlaceholder}>
-                      <Image source={require('../assets/bback.png')} style={styles.productImage} resizeMode="cover" />
-                    </View>
-                    <View style={styles.productDetails}>
-                      <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-                     
-                      <View style={styles.priceRow}>
-                         <Text style={styles.currentPrice}>{item.price}</Text>
-                        <Text style={styles.originalPrice}>{item.originalPrice}</Text>
-                        <Text style={styles.discountText}>({item.discount})</Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-              />
-            </View>
-          </>
-        )}
-      </ScrollView>
-
-      {/* Footer Navigation */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerItem}>
-          <Image source={require('../assets/home.png')} style={styles.footerIcon} resizeMode="contain" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => {
-          if (!isNavigating) {
-            setIsNavigating(true);
-            navigation.replace('SearchScreen');
-            setTimeout(() => setIsNavigating(false), 1000);
-          }
-        }}>
-          <Image source={require('../assets/search.png')} style={styles.footerIcon} resizeMode="contain" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => {
-          if (!isNavigating) {
-            setIsNavigating(true);
-            navigation.replace('ServicesScreen');
-            setTimeout(() => setIsNavigating(false), 1000);
-          }
-        }}>
-          <Image source={require('../assets/services.png')} style={styles.footerIcon} resizeMode="contain" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => {
-          if (!isNavigating) {
-            setIsNavigating(true);
-            navigation.replace('ProfileScreen');
-            setTimeout(() => setIsNavigating(false), 1000);
-          }
-        }}>
-          <Image source={require('../assets/profile.png')} style={styles.footerIcon} resizeMode="contain" />
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={showPermissionsModal} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={currentPermission === 'location' ? styles.locationIllustration : styles.notificationIllustration}>
-              <Image 
-                source={currentPermission === 'location' 
-                  ? require('../assets/locationpermission.png') 
-                  : require('../assets/notification permission.png')
-                }
-                style={currentPermission === 'location' ? styles.locationImage : styles.notificationImage}
-                resizeMode="contain"
-              />
-            </View>
-            
-            <Text style={styles.modalTitle}>
-              {currentPermission === 'location' ? 'Location' : 'Notification'}
-            </Text>
-            <Text style={styles.modalSubtitle}>
-              {currentPermission === 'location' 
-                ? 'Allow Bruno\'s Barbers to access your location to help you find nearby branches.'
-                : 'Please enable notifications to receive updates on your orders and offers.'
-              }
-            </Text>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={[styles.skipButton, { marginRight: 15 }]}
-                onPress={handlePermissionSkip}
-              >
-                <Text style={styles.skipButtonText}>Skip for now</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.allowButton}
-                onPress={handlePermissionAllow}
-              >
-                <Text style={styles.allowButtonText}>Allow</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Notification List Modal */}
-      <Modal 
-        visible={showNotificationListModal} 
-        transparent={false} 
-        animationType="slide"
-        onRequestClose={() => setShowNotificationListModal(false)}
-      >
-        <SafeAreaView style={styles.notificationFullScreen}>
-          <View style={styles.notificationHeader}>
-            <TouchableOpacity onPress={() => setShowNotificationListModal(false)} style={styles.backButton}>
-              <Text style={styles.backArrow}>←</Text>
-            </TouchableOpacity>
-            <Text style={styles.notificationTitle}>Notifications</Text>
-            <TouchableOpacity style={styles.moreButton} onPress={() => setShowOptionsMenu(!showOptionsMenu)}>
-              <Text style={styles.moreText}>⋮</Text>
-            </TouchableOpacity>
-            {showOptionsMenu && (
-              <View style={styles.optionsMenu}>
-                <TouchableOpacity style={styles.optionItem} onPress={handleSelectAll}>
-                  <Text style={styles.optionText}>{allSelected ? 'Deselect All' : 'Select All'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.optionItem} onPress={handleMarkAsRead}>
-                  <Text style={styles.optionText}>Mark as read</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-          
-          <ScrollView style={styles.notificationContent} showsVerticalScrollIndicator={false}>
-            {/* Today Section */}
-            <Text style={styles.sectionHeader}>Today</Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.notificationItem, 
-                selectedNotifications.includes('1') && { backgroundColor: '#e3f2fd' }
-              ]} 
-              onPress={() => {
-                if (selectedNotifications.includes('1')) {
-                  setSelectedNotifications(prev => prev.filter(id => id !== '1'));
-                } else {
-                  setSelectedNotifications(prev => [...prev, '1']);
-                }
-              }}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>🎉</Text>
-                {selectedNotifications.includes('1') && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.itemTitle}>Loyalty Points</Text>
-                <Text style={styles.itemMessage}>Congratulations! You just earned 10 BB points.</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.notificationItem, 
-                selectedNotifications.includes('2') && { backgroundColor: '#e3f2fd' }
-              ]} 
-              onPress={() => {
-                if (selectedNotifications.includes('2')) {
-                  setSelectedNotifications(prev => prev.filter(id => id !== '2'));
-                } else {
-                  setSelectedNotifications(prev => [...prev, '2']);
-                }
-              }}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>📅</Text>
-                {selectedNotifications.includes('2') && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.itemTitle}>Appointment Confirmed ✂️</Text>
-                <Text style={styles.itemMessage}>Your booking at Bruno's Barbers is scheduled for August 18, 2025, at 3:00 PM</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.notificationItem, 
-                selectedNotifications.includes('3') && { backgroundColor: '#e3f2fd' }
-              ]} 
-              onPress={() => {
-                if (selectedNotifications.includes('3')) {
-                  setSelectedNotifications(prev => prev.filter(id => id !== '3'));
-                } else {
-                  setSelectedNotifications(prev => [...prev, '3']);
-                }
-              }}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>📦</Text>
-                {selectedNotifications.includes('3') && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.itemTitle}>Order Delivered</Text>
-                <Text style={styles.itemMessage}>Your Bruno's products have been delivered. Enjoy your grooming essentials!</Text>
-              </View>
-            </TouchableOpacity>
-            
-            {/* Yesterday Section */}
-            <Text style={styles.sectionHeader}>Yesterday</Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.notificationItem, 
-                selectedNotifications.includes('4') && { backgroundColor: '#e3f2fd' }
-              ]} 
-              onPress={() => {
-                if (selectedNotifications.includes('4')) {
-                  setSelectedNotifications(prev => prev.filter(id => id !== '4'));
-                } else {
-                  setSelectedNotifications(prev => [...prev, '4']);
-                }
-              }}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>🏷️</Text>
-                {selectedNotifications.includes('4') && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.itemTitle}>New Offer Just for You!</Text>
-                <Text style={styles.itemMessage}>Use code STYLE20 and get 20% off your next haircut.</Text>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.notificationItem, 
-                selectedNotifications.includes('5') && { backgroundColor: '#e3f2fd' }
-              ]} 
-              onPress={() => {
-                if (selectedNotifications.includes('5')) {
-                  setSelectedNotifications(prev => prev.filter(id => id !== '5'));
-                } else {
-                  setSelectedNotifications(prev => [...prev, '5']);
-                }
-              }}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>🏷️</Text>
-                {selectedNotifications.includes('5') && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.itemTitle}>Groom & Save!</Text>
-                <Text style={styles.itemMessage}>Use CARE25 for 25% off on selected hair products.</Text>
-              </View>
-            </TouchableOpacity>
-            
-            {/* Day Before Yesterday Section */}
-            <Text style={styles.sectionHeader}>{formatDate(dayBeforeYesterday)}</Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.notificationItem, 
-                selectedNotifications.includes('6') && { backgroundColor: '#e3f2fd' }
-              ]} 
-              onPress={() => {
-                if (selectedNotifications.includes('6')) {
-                  setSelectedNotifications(prev => prev.filter(id => id !== '6'));
-                } else {
-                  setSelectedNotifications(prev => [...prev, '6']);
-                }
-              }}
-            >
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>📅</Text>
-                {selectedNotifications.includes('6') && (
-                  <View style={styles.checkmark}>
-                    <Text style={styles.checkmarkText}>✓</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.textContainer}>
-                <Text style={styles.itemTitle}>Appointment Confirmed ✂️</Text>
-                <Text style={styles.itemMessage}>Your booking at Bruno's Barbers is scheduled for August 18, 2025, at 3:00 PM</Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-    </SafeAreaView>
-  );
-};
-
-
 
 export default DashboardScreen;
